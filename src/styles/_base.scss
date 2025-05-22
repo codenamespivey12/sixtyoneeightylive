@@ -1,0 +1,117 @@
+// Base styles and typography
+
+// Import Google Fonts: 'Bangers' and 'Permanent Marker'
+@import url('https://fonts.googleapis.com/css2?family=Bangers&family=Permanent+Marker&display=swap');
+
+// Reset and base styles
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+  width: 100%;
+}
+
+body {
+  font-family: $font-family-body;
+  font-size: 16px;
+  line-height: 1.5;
+  color: $text-color;
+  background-color: $panel-bg;
+  overflow-x: hidden;
+}
+
+#root {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+// Typography
+h1, h2, h3, h4, h5, h6 {
+  font-family: $font-family-titles;
+  margin-bottom: $spacing-md;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: $outline-black;
+}
+
+h1 {
+  font-size: 2.5rem;
+  text-shadow: 2px 2px 0 $primary-yellow;
+}
+
+h2 {
+  font-size: 2rem;
+  text-shadow: 1px 1px 0 $primary-blue;
+}
+
+h3 {
+  font-size: 1.75rem;
+}
+
+h4 {
+  font-size: 1.5rem;
+}
+
+h5 {
+  font-size: 1.25rem;
+}
+
+h6 {
+  font-size: 1rem;
+}
+
+p {
+  margin-bottom: $spacing-md;
+}
+
+// Links
+a {
+  color: $primary-blue;
+  text-decoration: none;
+  transition: color 0.2s ease;
+  
+  &:hover {
+    color: darken($primary-blue, 10%);
+    text-decoration: underline;
+  }
+}
+
+// Lists
+ul, ol {
+  margin-bottom: $spacing-md;
+  padding-left: $spacing-lg;
+}
+
+// Buttons
+button {
+  cursor: pointer;
+  @include comic-button();
+  
+  &:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    box-shadow: none;
+    transform: none;
+  }
+}
+
+// Form elements
+input, textarea {
+  font-family: $font-family-body;
+  padding: $spacing-sm;
+  border: $comic-border-thin;
+  border-radius: 4px;
+  background-color: white;
+  width: 100%;
+  
+  &:focus {
+    outline: none;
+    border-color: $primary-blue;
+    box-shadow: 0 0 0 2px rgba($primary-blue, 0.2);
+  }
+}

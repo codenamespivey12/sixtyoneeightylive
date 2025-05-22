@@ -1,0 +1,31 @@
+// Comic book theme variables
+
+// Primary colors
+$primary-blue: #0050B3;    // POW! Blue
+$primary-yellow: #FFD300;  // BAM! Yellow
+$primary-red: #D90429;     // ZAP! Red
+$outline-black: #141414;   // For borders and outlines
+$panel-bg: #FDFDFD;        // Light background for panels
+$text-color: #1f1f1f;      // Default text color
+
+// Typography
+$font-family-titles: 'Bangers', cursive;       // For headings and titles
+$font-family-body: 'Permanent Marker', cursive; // For body text and UI elements
+
+// Borders
+$comic-border-thick: 4px solid $outline-black;
+$comic-border-medium: 2px solid $outline-black;
+$comic-border-thin: 1px solid $outline-black;
+
+// Spacing
+$spacing-xs: 4px;
+$spacing-sm: 8px;
+$spacing-md: 16px;
+$spacing-lg: 24px;
+$spacing-xl: 32px;
+
+// Breakpoints
+$breakpoint-sm: 576px;
+$breakpoint-md: 768px;
+$breakpoint-lg: 992px;
+$breakpoint-xl: 1200px;

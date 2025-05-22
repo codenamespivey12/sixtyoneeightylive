@@ -1,0 +1,211 @@
+// Component-specific styles for comic book theme
+
+// Chat Panel
+.chat-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  
+  .chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: $spacing-sm;
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-md;
+  }
+  
+  .chat-message {
+    &.user-message {
+      @include comic-bubble($primary-yellow);
+      align-self: flex-end;
+      
+      &::after {
+        left: auto;
+        right: 20px;
+      }
+      
+      &::before {
+        left: auto;
+        right: 18px;
+      }
+    }
+    
+    &.ai-message {
+      @include comic-bubble($primary-blue);
+      color: white;
+      align-self: flex-start;
+    }
+  }
+  
+  .chat-input-area {
+    margin-top: auto;
+    padding: $spacing-sm;
+    display: flex;
+    gap: $spacing-sm;
+    
+    .chat-input {
+      flex: 1;
+    }
+    
+    .send-button {
+      background-color: $primary-blue;
+      color: white;
+    }
+  }
+}
+
+// Media Display
+.media-display {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  
+  .media-container {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+    position: relative;
+    background-color: #f0f0f0;
+    
+    video {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+    }
+    
+    .no-media-placeholder {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: $spacing-xl;
+      
+      .placeholder-icon {
+        font-size: 3rem;
+        margin-bottom: $spacing-md;
+      }
+    }
+  }
+}
+
+// Controls Bar
+.controls-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  
+  .control-button {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: $spacing-sm;
+    border-radius: 50%;
+    width: 60px;
+    height: 60px;
+    justify-content: center;
+    background-color: $primary-yellow;
+    border: $comic-border-medium;
+    transition: all 0.2s ease;
+    
+    &:hover {
+      transform: scale(1.05);
+    }
+    
+    &:active {
+      transform: scale(0.95);
+    }
+    
+    &.active {
+      background-color: $primary-blue;
+      color: white;
+    }
+    
+    .button-label {
+      font-size: 0.7rem;
+      margin-top: 2px;
+    }
+  }
+}
+
+// Audio Visualizer
+.audio-visualizer {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  height: 40px;
+  padding: $spacing-xs;
+  @include comic-panel(thin);
+  background-color: lighten($primary-blue, 40%);
+  
+  .visualizer-bar {
+    width: 4px;
+    margin: 0 2px;
+    background-color: $primary-blue;
+    border: 1px solid $outline-black;
+    transition: height 0.1s ease;
+  }
+}
+
+// Comic SFX Overlay
+.comic-sfx-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  
+  .sfx {
+    font-family: $font-family-titles;
+    font-size: 5rem;
+    text-shadow: 3px 3px 0 $outline-black;
+    transform: rotate(-5deg);
+    padding: $spacing-md;
+    animation: popIn 0.5s ease-out;
+    
+    &.pow {
+      color: $primary-blue;
+      background-color: $primary-yellow;
+      border: $comic-border-thick;
+      border-radius: 50%;
+    }
+    
+    &.bam {
+      color: $primary-yellow;
+      background-color: $primary-red;
+      border: $comic-border-thick;
+      clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+    }
+    
+    &.zap {
+      color: white;
+      background-color: $primary-blue;
+      border: $comic-border-thick;
+      clip-path: polygon(10% 25%, 35% 25%, 20% 50%, 40% 50%, 15% 100%, 30% 65%, 10% 65%);
+    }
+  }
+}
+
+@keyframes popIn {
+  0% {
+    transform: scale(0) rotate(-5deg);
+    opacity: 0;
+  }
+  70% {
+    transform: scale(1.2) rotate(-5deg);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1) rotate(-5deg);
+    opacity: 1;
+  }
+}

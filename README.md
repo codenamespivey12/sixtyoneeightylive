@@ -1,109 +1,73 @@
-# Multimodal Live API - Web console
+# sixtyoneeighty live 💥 POW!
 
-This repository contains a react-based starter app for using the [Multimodal Live API]([https://ai.google.dev/gemini-api](https://ai.google.dev/api/multimodal-live)) over a websocket. It provides modules for streaming audio playback, recording user media such as from a microphone, webcam or screen capture as well as a unified log view to aid in development of your application.
+**sixtyoneeighty live** is a real-time AI chat and video streaming web application for desktop browsers, bringing the vibrant, action-packed aesthetic of Adam West's Batman comics to your screen! Engage with the Gemini Live API through chat, voice, webcam video, and screen sharing.
 
-To get started, [create a free Gemini API key](https://aistudio.google.com/apikey). We have provided several example applications on other branches of this repository:
+## ✨ Features (Planned & In-Progress)
 
-- [demos/GenExplainer](https://github.com/google-gemini/multimodal-live-api-web-console/tree/demos/genexplainer)
-- [demos/GenWeather](https://github.com/google-gemini/multimodal-live-api-web-console/tree/demos/genweather)
+* **Real-time Multimodal Chat:** Interact using text, voice, video, and screen sharing.
+* **Live Video Streaming:** Share your webcam feed.
+* **Live Audio Streaming:** With a dynamic microphone volume visualizer.
+* **Screen Sharing:** Easily toggle between webcam and screen content.
+* **Authentic Comic Book Theme:**
+    * Bold, vibrant colors (blues, yellows, reds, with black outlines).
+    * Thick comic-style borders on all elements.
+    * Comic fonts ('Bangers', 'Permanent Marker').
+    * Subtle halftone background patterns.
+    * Animated comic SFX overlays ("POW!", "BAM!", "ZAP!").
+    * Chunky, fun comic-style icons and buttons.
+    * "Utility belt" media controls.
+* **Backend:** Powered by the Google Gemini Live API (JavaScript SDK, native audio, "Leda" voice).
 
-Below is an example of an entire application that will use Google Search grounding and then render graphs using [vega-embed](https://github.com/vega/vega-embed):
+## 🥞 Tech Stack
 
-```typescript
-import { type FunctionDeclaration, SchemaType } from "@google/generative-ai";
-import { useEffect, useRef, useState, memo } from "react";
-import vegaEmbed from "vega-embed";
-import { useLiveAPIContext } from "../../contexts/LiveAPIContext";
+* **Frontend:**
+    * React (TypeScript)
+    * Functional Components & Hooks
+    * SCSS for styling (with CSS variables for theming)
+    * React Context for State Management
+    * Custom Hooks for Media (Webcam, Mic, Screen Share)
+* **Fonts:**
+    * [Google Fonts: Bangers](https://fonts.google.com/specimen/Bangers)
+    * [Google Fonts: Permanent Marker](https://fonts.google.com/specimen/Permanent+Marker)
+* **API:** Google Gemini Live API
 
-export const declaration: FunctionDeclaration = {
-  name: "render_altair",
-  description: "Displays an altair graph in json format.",
-  parameters: {
-    type: SchemaType.OBJECT,
-    properties: {
-      json_graph: {
-        type: SchemaType.STRING,
-        description:
-          "JSON STRING representation of the graph to render. Must be a string, not a json object",
-      },
-    },
-    required: ["json_graph"],
-  },
-};
+## 🚀 Getting Started
 
-export function Altair() {
-  const [jsonString, setJSONString] = useState<string>("");
-  const { client, setConfig } = useLiveAPIContext();
+**(Instructions will be updated as the project is built)**
 
-  useEffect(() => {
-    setConfig({
-      model: "models/gemini-2.0-flash-exp",
-      systemInstruction: {
-        parts: [
-          {
-            text: 'You are my helpful assistant. Any time I ask you for a graph call the "render_altair" function I have provided you. Dont ask for additional information just make your best judgement.',
-          },
-        ],
-      },
-      tools: [{ googleSearch: {} }, { functionDeclarations: [declaration] }],
-    });
-  }, [setConfig]);
+1.  **Clone the repository:**
+    ```bash
+    git clone <repository-url>
+    cd sixtyoneeighty-live
+    ```
+2.  **Install dependencies:**
+    ```bash
+    npm install
+    ```
+3.  **Set up environment variables:**
+    * Create a `.env` file in the root directory.
+    * Add your Gemini API Key:
+        ```
+        REACT_APP_GEMINI_API_KEY=YOUR_API_KEY_HERE
+        ```
+        *(Note: Environment variables should be handled securely and not committed if sensitive. [cite: 8])*
+4.  **Run the development server:**
+    ```bash
+    npm start
+    ```
+    The application should open in your default web browser at `http://localhost:3000` (or similar).
 
-  useEffect(() => {
-    const onToolCall = (toolCall: ToolCall) => {
-      console.log(`got toolcall`, toolCall);
-      const fc = toolCall.functionCalls.find(
-        (fc) => fc.name === declaration.name
-      );
-      if (fc) {
-        const str = (fc.args as any).json_graph;
-        setJSONString(str);
-      }
-    };
-    client.on("toolcall", onToolCall);
-    return () => {
-        client.off("toolcall", onToolCall);
-    };
-  }, [client]);
+## 🛠️ Scripts
 
-  const embedRef = useRef<HTMLDivElement>(null);
+* `npm start`: Runs the app in development mode.
+* `npm run build`: Builds the app for production.
+* `npm test`: Runs the test suite (tests to be added). [cite: 7]
+* `npm run lint`: Lints the codebase (linter to be configured).
 
-  useEffect(() => {
-    if (embedRef.current && jsonString) {
-      vegaEmbed(embedRef.current, JSON.parse(jsonString));
-    }
-  }, [embedRef, jsonString]);
-  return <div className="vega-embed" ref={embedRef} />;
-}
-```
+## 🎨 Assets & Theming
 
-## development
+* **Logo:** A comic book title-style logo for "sixtyoneeighty live" will be placed in the upper left. (Asset TBD)
+* **SFX Popups:** Animated "POW!", "BAM!", "ZAP!" graphics. (Assets TBD or CSS animated)
+* **Icons:** Custom SVG icons for media controls (mic, camera, screen share, connect/disconnect). (Assets TBD)
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
-Project consists of:
-
-- an Event-emitting websocket-client to ease communication between the websocket and the front-end
-- communication layer for processing audio in and out
-- a boilerplate view for starting to build your apps and view logs
-
-## Available Scripts
-
-In the project directory, you can run:
-
-### `npm start`
-
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
-
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
-
-### `npm run build`
-
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
-
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
-
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+*(This README will be updated as new features are added or setup steps change. [cite: 34])*

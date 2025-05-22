@@ -1,0 +1,83 @@
+// Comic book theme styles and mixins
+
+// Halftone background pattern placeholder
+@mixin halftone-background() {
+  // This is a placeholder for the halftone background pattern
+  // For now, we'll use a simple dotted background
+  background-image: radial-gradient($outline-black 1px, transparent 1px);
+  background-size: 20px 20px;
+  background-color: $panel-bg;
+}
+
+// Comic panel mixin
+@mixin comic-panel($border-width: thick) {
+  @if $border-width == thick {
+    border: $comic-border-thick;
+  } @else if $border-width == medium {
+    border: $comic-border-medium;
+  } @else {
+    border: $comic-border-thin;
+  }
+  background-color: $panel-bg;
+  box-shadow: 4px 4px 0px $outline-black;
+  border-radius: 4px;
+  padding: $spacing-md;
+}
+
+// Comic button style
+@mixin comic-button() {
+  font-family: $font-family-titles;
+  text-transform: uppercase;
+  background-color: $primary-yellow;
+  color: $outline-black;
+  border: $comic-border-medium;
+  border-radius: 4px;
+  padding: $spacing-sm $spacing-md;
+  box-shadow: 3px 3px 0 $outline-black;
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+  
+  &:hover {
+    transform: translate(1px, 1px);
+    box-shadow: 2px 2px 0 $outline-black;
+  }
+  
+  &:active {
+    transform: translate(3px, 3px);
+    box-shadow: 0 0 0 $outline-black;
+  }
+}
+
+// Comic text bubble mixin
+@mixin comic-bubble($color: $panel-bg) {
+  position: relative;
+  background-color: $color;
+  border: $comic-border-medium;
+  border-radius: 12px;
+  padding: $spacing-md;
+  margin-bottom: $spacing-lg;
+  box-shadow: 3px 3px 0 $outline-black;
+  
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: -15px;
+    left: 20px;
+    border-width: 15px 15px 0;
+    border-style: solid;
+    border-color: $color transparent;
+    display: block;
+    width: 0;
+  }
+  
+  &::before {
+    content: '';
+    position: absolute;
+    bottom: -19px;
+    left: 18px;
+    border-width: 17px 17px 0;
+    border-style: solid;
+    border-color: $outline-black transparent;
+    display: block;
+    width: 0;
+  }
+}

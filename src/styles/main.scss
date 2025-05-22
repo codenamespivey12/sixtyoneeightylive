@@ -1,0 +1,16 @@
+// Main SCSS file that imports all other partials
+
+// Import variables first so they're available everywhere
+@import 'variables';
+
+// Import theme styles next (mixins, utility classes)
+@import 'theme';
+
+// Import base styles (resets, typography, etc.)
+@import 'base';
+
+// Import layout styles
+@import 'layout';
+
+// Import component styles
+@import 'components';
