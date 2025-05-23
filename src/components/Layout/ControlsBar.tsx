@@ -11,8 +11,8 @@ type ControlButtonProps = {
 };
 
 const ControlButton: React.FC<ControlButtonProps> = ({ label, active = false, onClick }) => (
-  <button 
-    className={`control-button ${active ? 'active' : ''}`} 
+  <button
+    className={`control-button ${active ? 'active' : ''}`}
     onClick={onClick}
   >
     <span className="button-icon">{label.charAt(0)}</span>
@@ -23,15 +23,15 @@ const ControlButton: React.FC<ControlButtonProps> = ({ label, active = false, on
 const ControlsBar: React.FC = () => {
   // Gemini context for API connection
   const { isConnected, connectToGemini, disconnectFromGemini } = useGemini();
-  
+
   // Custom hooks for media access
   const { status: micStatus, startMicrophone, stopMicrophone } = useMicrophone();
   const { status: webcamStatus, startWebcam, stopWebcam } = useWebcam();
   const { status: screenStatus, startScreenShare, stopScreenShare } = useScreenShare();
-  
+
   // Local state
   const [apiKey, setApiKey] = useState<string>('');
-  
+
   // Check for API key in .env file on component mount
   useEffect(() => {
     const envApiKey = import.meta.env?.VITE_GEMINI_API_KEY;
@@ -40,7 +40,7 @@ const ControlsBar: React.FC = () => {
       console.log('[ControlsBar] Found API key in environment variables');
     }
   }, []);
-  
+
   // Derived state for button status
   const micActive = micStatus === 'active';
   const cameraActive = webcamStatus === 'active';
@@ -65,14 +65,14 @@ const ControlsBar: React.FC = () => {
       if (screenActive) {
         await stopScreenShare();
       }
-      
+
       // Then toggle camera
       if (cameraActive) {
         await stopWebcam();
       } else {
         await startWebcam();
       }
-      
+
       console.log(`[ControlsBar] Camera ${!cameraActive ? 'activated' : 'deactivated'}`);
     } catch (error) {
       console.error('[ControlsBar] Camera error:', error);
@@ -85,14 +85,14 @@ const ControlsBar: React.FC = () => {
       if (cameraActive) {
         await stopWebcam();
       }
-      
+
       // Then toggle screen sharing
       if (screenActive) {
         await stopScreenShare();
       } else {
         await startScreenShare();
       }
-      
+
       console.log(`[ControlsBar] Screen sharing ${!screenActive ? 'activated' : 'deactivated'}`);
     } catch (error) {
       console.error('[ControlsBar] Screen sharing error:', error);
@@ -117,30 +117,30 @@ const ControlsBar: React.FC = () => {
 
   return (
     <>
-      <ControlButton 
-        label="MIC" 
-        active={micActive} 
-        onClick={toggleMic} 
+      <ControlButton
+        label="MIC"
+        active={micActive}
+        onClick={toggleMic}
       />
-      
-      <ControlButton 
-        label="CAM" 
-        active={cameraActive} 
-        onClick={toggleCamera} 
+
+      <ControlButton
+        label="CAM"
+        active={cameraActive}
+        onClick={toggleCamera}
       />
-      
-      <ControlButton 
-        label="SCREEN" 
-        active={screenActive} 
-        onClick={toggleScreen} 
+
+      <ControlButton
+        label="SCREEN"
+        active={screenActive}
+        onClick={toggleScreen}
       />
-      <div className="connection-status">
+      <div className="connection-status" style={{ fontFamily: 'Arial, sans-serif', fontWeight: 'bold' }}>
         {isConnected ? 'CONNECTED' : 'DISCONNECTED'}
       </div>
-      <ControlButton 
-        label={isConnected ? "DISCONNECT" : "CONNECT"} 
-        active={isConnected} 
-        onClick={toggleConnection} 
+      <ControlButton
+        label={isConnected ? "DISCONNECT" : "CONNECT"}
+        active={isConnected}
+        onClick={toggleConnection}
       />
     </>
   );

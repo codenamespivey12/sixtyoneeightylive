@@ -63,11 +63,12 @@ export type LiveServerMessage = {
   serverContent?: ServerContent;
 };
 
-// Type for Gemini session (as seen in backend.txt)
+// Type for Gemini session (updated for new SDK)
 export interface Session {
-  // Basic session methods as seen in backend.txt
-  sendMessage: (message: any) => Promise<void>;
-  close: () => Promise<void>;
+  // Methods for the new SDK
+  sendClientContent: (content: any) => void;
+  sendRealtimeInput: (input: any) => void;
+  close: () => void;
 }
 
 // Basic response type for client-side handling
@@ -120,7 +121,7 @@ export type SpeechConfig = {
 // Context window compression config (as seen in backend.txt)
 export type ContextWindowCompressionConfig = {
   triggerTokens: string;
-  slidingWindow: { 
+  slidingWindow: {
     targetTokens: string;
   };
 };

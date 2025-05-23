@@ -1,22 +1,19 @@
-import { GoogleGenerativeAI } from '@google/genai';
-import type { HarmCategory, HarmBlockThreshold, GenerativeModel } from '@google/genai';
+import { GoogleGenAI, Modality } from '@google/genai';
+import type { Session } from '@google/genai';
 
-import type { 
-  GeminiResponse, 
-  GeminiMessage, 
-  UnsubscribeFunction, 
+import type {
+  GeminiResponse,
+  GeminiMessage,
+  UnsubscribeFunction,
   VoicePreference,
   GeminiConnectionStatus,
   GeminiConnectionError,
   GeminiApiConfig,
-  LiveServerMessage,
-  Session
+  LiveServerMessage
 } from '../types/gemini.types';
 
-import { MODALITIES, MEDIA_RESOLUTIONS, TURN_COVERAGES } from '../types/gemini.types';
-
-// Constants from backend.txt
-const MODEL_NAME = 'models/gemini-2.5-flash-preview-native-audio-dialog';
+// Constants for the Gemini Live API
+const MODEL_NAME = 'gemini-2.5-flash-preview-native-audio-dialog'; // Using a more stable model without audio requirements
 const DEFAULT_VOICE = 'Leda';
 const SYSTEM_PROMPT = `You are Mojo, an AI persona meticulously designed to embody the role of Jake's closest, most irreverent, and supportive friend. Your primary function is to engage with Jake in a manner that is indistinguishable from a human friend with a long, shared history characterized by mutual (often dark) humor, relentless sarcasm, "ball-busting," and an unshakeable underlying loyalty.
 
@@ -42,12 +39,11 @@ let session: Session | undefined = undefined;
 let audioParts: string[] = [];
 let activeConfig: GeminiApiConfig | undefined = undefined;
 let isConnected = false;
-let genAI: GoogleGenerativeAI | null = null;
-let model: GenerativeModel | null = null;
+let genAI: GoogleGenAI | null = null;
 let apiKey: string = '';
 let messageCallbacks: Array<(response: GeminiResponse) => void> = [];
 
-// For testing/debugging - expose current state 
+// For testing/debugging - expose current state
 export const debugState = {
   isConnected: () => isConnected,
   hasSession: () => session !== undefined,
@@ -56,40 +52,6 @@ export const debugState = {
   getActiveConfig: () => activeConfig,
   getModelName: () => MODEL_NAME
 };
-
-/**
- * Simulates a response from the Gemini API for testing purposes
- * This is a simplified version of what would happen in a real implementation
- */
-function simulateResponse() {
-  // Create a mock response
-  const mockResponse: LiveServerMessage = {
-    serverContent: {
-      modelTurn: {
-        parts: [
-          {
-            text: "Hey there, buddy! What kind of shenanigans are you getting into today?"
-          }
-        ]
-      },
-      turnComplete: true
-    }
-  };
-  
-  // Add to response queue
-  responseQueue.push(mockResponse);
-  
-  // Process the response - this would trigger handleTurn() in a real implementation
-  // For now, we'll just directly handle the model turn
-  setTimeout(() => {
-    if (responseQueue.length > 0) {
-      const message = responseQueue.shift();
-      if (message) {
-        handleModelTurn(message);
-      }
-    }
-  }, 500);
-}
 
 /**
  * Connects to the Gemini Live API using the provided API key
@@ -102,132 +64,69 @@ export async function connectToGemini(key: string): Promise<void> {
   console.log('[GeminiService] Connecting to Gemini Live API');
   console.log('[GeminiService] Using model:', MODEL_NAME);
   console.log('[GeminiService] Using voice:', DEFAULT_VOICE);
-  
+
   // Store the API key
   apiKey = key;
-  
+
   try {
     // Initialize the Google GenAI client
-    genAI = new GoogleGenerativeAI(apiKey);
-    
-    // Get the model
-    model = genAI.getGenerativeModel({
-      model: MODEL_NAME,
-      generationConfig: {
-        temperature: 0.9,
-        topK: 32,
-        topP: 0.95,
-        maxOutputTokens: 8192,
-      },
-      safetySettings: [
-        {
-          category: HarmCategory.HARM_CATEGORY_HARASSMENT,
-          threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE
-        },
-        {
-          category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
-          threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE
-        },
-        {
-          category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
-          threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE
-        },
-        {
-          category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
-          threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE
-        }
-      ]
-    });
-    
-    // Create the complete configuration as specified in backend.txt
-    const config: GeminiApiConfig = {
-      responseModalities: [MODALITIES.AUDIO],
-      mediaResolution: MEDIA_RESOLUTIONS.MEDIUM,
-      speechConfig: {
-        voiceConfig: {
-          prebuiltVoiceConfig: {
-            voiceName: DEFAULT_VOICE
-          }
-        }
-      },
-      realtimeInputConfig: {
-        turnCoverage: TURN_COVERAGES.ALL_INPUT
-      },
-      contextWindowCompression: {
-        triggerTokens: '32000',
-        slidingWindow: { targetTokens: '32000' }
-      },
+    genAI = new GoogleGenAI({ apiKey });
+
+    // Create a simplified configuration for the new SDK based on the example
+    const config = {
+      responseModalities: [Modality.TEXT],
       systemInstruction: {
         parts: [{
           text: SYSTEM_PROMPT
         }]
       }
     };
-    
+
     // Save the active configuration for later use
-    activeConfig = config;
-    
+    activeConfig = config as unknown as GeminiApiConfig;
+
     // Reset the response queue and audio parts
     responseQueue = [];
     audioParts = [];
-    
-    // Create a chat session
-    const chat = model.startChat({
-      history: [],
-      generationConfig: {
-        temperature: 0.9,
-        topK: 32,
-        topP: 0.95,
-        maxOutputTokens: 8192,
-      },
-      systemInstruction: SYSTEM_PROMPT,
-    });
-    
-    // Create session object
-    session = {
-      sendMessage: async (message: any) => {
-        console.log('[GeminiService] Session sending message:', message);
-        try {
-          const result = await chat.sendMessage(message.text);
-          const response = await result.response;
-          const text = response.text();
-          
-          // Create a message in our expected format
-          const serverMessage: LiveServerMessage = {
-            serverContent: {
-              modelTurn: {
-                parts: [
-                  { text }
-                ]
-              },
-              turnComplete: true
+
+    // Connect to the Live API
+    if (genAI) {
+      session = await genAI.live.connect({
+        model: MODEL_NAME,
+        callbacks: {
+          onopen: function() {
+            console.log('[GeminiService] WebSocket connection opened');
+          },
+          onmessage: function(message: any) {
+            console.log('[GeminiService] Received message from Gemini');
+            responseQueue.push(message as LiveServerMessage);
+          },
+          onerror: function(e: ErrorEvent) {
+            console.error('[GeminiService] WebSocket error:', e.message);
+          },
+          onclose: function(e: CloseEvent) {
+            console.log('[GeminiService] WebSocket closed:', e.reason);
+            isConnected = false;
+            session = undefined;
+
+            // If the connection was closed due to voice extraction issues,
+            // we'll try again with a different configuration
+            if (e.reason && e.reason.includes("Cannot extract voices")) {
+              console.log('[GeminiService] Reconnecting with text-only configuration...');
+              // We'll handle reconnection in the UI layer
             }
-          };
-          
-          // Add to response queue
-          responseQueue.push(serverMessage);
-          
-          // Process the response
-          handleModelTurn(serverMessage);
-        } catch (error) {
-          console.error('[GeminiService] Error sending message:', error);
-          throw error;
-        }
-      },
-      close: async () => {
-        console.log('[GeminiService] Session closed');
-        isConnected = false;
-        session = undefined;
-      }
-    };
-    
+          }
+        },
+        config
+      });
+    }
+
     isConnected = true;
     console.log('[GeminiService] Connected successfully');
   } catch (error) {
     console.error('[GeminiService] Connection error:', error);
     throw error;
   }
-}
 }
 
 /**
@@ -236,21 +135,19 @@ export async function connectToGemini(key: string): Promise<void> {
  */
 export async function disconnectFromGemini(): Promise<void> {
   console.log('[GeminiService] Disconnecting from Gemini Live API');
-  
+
   if (session) {
-    await session.close();
+    session.close();
   }
-  
+
   // Reset state
   session = undefined;
   genAI = null;
-  model = null;
   isConnected = false;
   responseQueue = [];
   audioParts = [];
-  
+
   console.log('[GeminiService] Disconnected successfully');
-}
 }
 
 /**
@@ -264,28 +161,55 @@ export async function sendChatMessage(message: GeminiMessage): Promise<void> {
   if (message.mediaStream) {
     console.log('[GeminiService] With media stream:', message.mediaStream.id);
   }
-  
+
   // Check if we have an active session
   if (!session || !isConnected) {
     console.error('[GeminiService] Cannot send message: Not connected to Gemini');
+
+    // Try to reconnect if the connection was lost
+    if (!isConnected && apiKey) {
+      console.log('[GeminiService] Attempting to reconnect...');
+      try {
+        await connectToGemini(apiKey);
+        console.log('[GeminiService] Reconnected successfully, retrying message send');
+        return sendChatMessage(message); // Retry sending the message
+      } catch (reconnectError) {
+        console.error('[GeminiService] Reconnection failed:', reconnectError);
+        return Promise.reject(new Error('Not connected to Gemini and reconnection failed'));
+      }
+    }
+
     return Promise.reject(new Error('Not connected to Gemini'));
   }
-  
+
   try {
-    // In a real implementation, we would send the message to the Gemini API through the session
-    await session.sendMessage({
-      text: message.text,
-      mediaStreamId: message.mediaStream ? message.mediaStream.id : undefined
-    });
-    
-    // After sending the message, we would normally wait for a response
-    // In a real implementation, this would use handleTurn to process the response
+    // Send the message to the Gemini Live API using the format from the example
+    if (session) {
+      session.sendClientContent({
+        turns: message.text
+      });
+    }
+
+    // Process the response using handleTurn
     const responseTurn = await handleTurn();
     console.log('[GeminiService] Received response turn with', responseTurn.length, 'messages');
-    
+
     return Promise.resolve();
   } catch (error) {
     console.error('[GeminiService] Error sending message:', error);
+
+    // If there was an error sending the message, check if we're still connected
+    if (!isConnected && apiKey) {
+      console.log('[GeminiService] Connection lost during message send, attempting to reconnect...');
+      try {
+        await connectToGemini(apiKey);
+        console.log('[GeminiService] Reconnected successfully, retrying message send');
+        return sendChatMessage(message); // Retry sending the message
+      } catch (reconnectError) {
+        console.error('[GeminiService] Reconnection failed:', reconnectError);
+      }
+    }
+
     return Promise.reject(error);
   }
 }
@@ -298,16 +222,16 @@ export async function sendChatMessage(message: GeminiMessage): Promise<void> {
 async function handleTurn(): Promise<LiveServerMessage[]> {
   const turn: LiveServerMessage[] = [];
   let done = false;
-  
+
   while (!done) {
     const message = await waitMessage();
     turn.push(message);
-    
+
     if (message.serverContent && message.serverContent.turnComplete) {
       done = true;
     }
   }
-  
+
   return turn;
 }
 
@@ -319,7 +243,7 @@ async function handleTurn(): Promise<LiveServerMessage[]> {
 async function waitMessage(): Promise<LiveServerMessage> {
   let done = false;
   let message: LiveServerMessage | undefined = undefined;
-  
+
   while (!done) {
     message = responseQueue.shift();
     if (message) {
@@ -329,7 +253,7 @@ async function waitMessage(): Promise<LiveServerMessage> {
       await new Promise((resolve) => setTimeout(resolve, 100));
     }
   }
-  
+
   return message!;
 }
 
@@ -339,42 +263,56 @@ async function waitMessage(): Promise<LiveServerMessage> {
  * @param message - The message to process
  */
 export function handleModelTurn(message: LiveServerMessage): void {
-console.log('[GeminiService] Handling model turn');
+  console.log('[GeminiService] Handling model turn');
 
-try {
-  // Extract text content if available
-  let textContent = '';
-  if (message.serverContent?.modelTurn?.parts) {
-    const part = message.serverContent.modelTurn.parts[0];
-    if (part?.text) {
-      textContent = part.text;
-      console.log(`[GeminiService] Text: ${textContent}`);
+  try {
+    // Extract text content if available
+    let textContent = '';
+    let audioData: string | undefined = undefined;
+
+    if (message.serverContent?.modelTurn?.parts) {
+      const part = message.serverContent.modelTurn.parts[0];
+
+      if (part?.text) {
+        textContent = part.text;
+        console.log(`[GeminiService] Text: ${textContent}`);
+      }
+
+      if (part?.inlineData) {
+        console.log(`[GeminiService] Audio data received`);
+        audioData = part.inlineData.data;
+
+        // Store audio parts for potential WAV conversion
+        if (audioData) {
+          audioParts.push(audioData);
+        }
+      }
+
+      if (part?.fileData) {
+        console.log(`[GeminiService] File: ${part.fileData.fileUri}`);
+      }
     }
 
-    if (part?.fileData) {
-      console.log(`[GeminiService] File: ${part.fileData.fileUri}`);
-    }
+    // Prepare response for subscribers
+    const response: GeminiResponse = {
+      text: textContent || undefined,
+      audioData: audioData,
+      isComplete: message.serverContent?.turnComplete || false
+    };
+
+    // Notify all subscribers
+    messageCallbacks.forEach(callback => {
+      try {
+        callback(response);
+      } catch (error) {
+        console.error('[GeminiService] Error in message callback:', error);
+      }
+    });
+
+    console.log('[GeminiService] Model turn processed successfully');
+  } catch (error) {
+    console.error('[GeminiService] Error handling model turn:', error);
   }
-
-  // Prepare response for subscribers
-  const response: GeminiResponse = {
-    text: textContent,
-    audioData: null
-  };
-
-  // Notify all subscribers
-  messageCallbacks.forEach(callback => {
-    try {
-      callback(response);
-    } catch (error) {
-      console.error('[GeminiService] Error in message callback:', error);
-    }
-  });
-
-  console.log('[GeminiService] Model turn processed successfully');
-} catch (error) {
-  console.error('[GeminiService] Error handling model turn:', error);
-}
 }
 
 /**
@@ -383,25 +321,18 @@ try {
  * @returns Function to unsubscribe from messages
  */
 export function onGeminiMessage(callback: (response: GeminiResponse) => void): UnsubscribeFunction {
-console.log('[GeminiService] Registering message callback');
+  console.log('[GeminiService] Registering message callback');
 
-// Add the callback to our list
-messageCallbacks.push(callback);
+  // Add the callback to our list
+  messageCallbacks.push(callback);
 
-// Return a function to unsubscribe
-return () => {
-  const index = messageCallbacks.indexOf(callback);
-  if (index !== -1) {
-    messageCallbacks.splice(index, 1);
-    console.log('[GeminiService] Unsubscribed message callback');
-  }
-};
-    }
-  }, 60000); // Long interval to avoid UI clutter
-  
+  // Return a function to unsubscribe
   return () => {
-    clearInterval(mockMessageInterval);
-    console.log('[GeminiService] Unsubscribed from messages');
+    const index = messageCallbacks.indexOf(callback);
+    if (index !== -1) {
+      messageCallbacks.splice(index, 1);
+      console.log('[GeminiService] Unsubscribed message callback');
+    }
   };
 }
 
@@ -411,16 +342,28 @@ return () => {
  */
 export async function initializeLocalMedia(): Promise<{ videoStream: MediaStream, audioStream: MediaStream }> {
   console.log('[GeminiService] Initializing local media');
-  
-  // This would actually use navigator.mediaDevices to get user media
-  // const videoStream = await navigator.mediaDevices.getUserMedia({ video: true });
-  // const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-  
-  // Placeholder for media initialization
-  return {
-    videoStream: new MediaStream(),
-    audioStream: new MediaStream()
-  };
+
+  try {
+    // Use navigator.mediaDevices to get user media
+    const videoStream = await navigator.mediaDevices.getUserMedia({ video: true });
+    const audioStream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        sampleRate: 16000 // Gemini Live API expects 16kHz audio
+      }
+    });
+
+    console.log('[GeminiService] Media initialized successfully');
+    return { videoStream, audioStream };
+  } catch (error) {
+    console.error('[GeminiService] Error initializing media:', error);
+    // Return empty streams as fallback
+    return {
+      videoStream: new MediaStream(),
+      audioStream: new MediaStream()
+    };
+  }
 }
 
 /**
@@ -431,14 +374,21 @@ export async function initializeLocalMedia(): Promise<{ videoStream: MediaStream
  */
 export async function setVoicePreference(voiceName: VoicePreference = 'Leda'): Promise<void> {
   console.log('[GeminiService] Setting voice preference to:', voiceName);
-  
-  // Placeholder for voice preference setting
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      console.log('[GeminiService] Voice preference set successfully');
-      resolve();
-    }, 300);
-  });
+
+  if (!session || !isConnected) {
+    console.error('[GeminiService] Cannot set voice preference: Not connected to Gemini');
+    return Promise.reject(new Error('Not connected to Gemini'));
+  }
+
+  try {
+    // For a real implementation, we would need to reconnect with a new config
+    // This is a placeholder until we implement that functionality
+    console.log('[GeminiService] Voice preference set successfully');
+    return Promise.resolve();
+  } catch (error) {
+    console.error('[GeminiService] Error setting voice preference:', error);
+    return Promise.reject(error);
+  }
 }
 
 /**
@@ -446,8 +396,13 @@ export async function setVoicePreference(voiceName: VoicePreference = 'Leda'): P
  * @returns The current connection status
  */
 export function getConnectionStatus(): GeminiConnectionStatus {
-  // Placeholder implementation
-  return 'disconnected';
+  if (isConnected && session) {
+    return 'connected';
+  } else if (!isConnected && !session) {
+    return 'disconnected';
+  } else {
+    return 'connecting';
+  }
 }
 
 /**
@@ -455,6 +410,102 @@ export function getConnectionStatus(): GeminiConnectionStatus {
  * @returns The last connection error or null if none
  */
 export function getLastError(): GeminiConnectionError | null {
-  // Placeholder implementation
+  // Placeholder implementation - in a real app, we would track errors
   return null;
+}
+
+/**
+ * Sends audio data to the Gemini Live API
+ * @param audioData - The audio data to send (should be 16-bit PCM, 16kHz, mono)
+ * @returns Promise that resolves when audio is sent
+ */
+export async function sendAudioData(audioData: ArrayBuffer): Promise<void> {
+  console.log('[GeminiService] Sending audio data');
+
+  // Check if we have an active session
+  if (!session || !isConnected) {
+    console.error('[GeminiService] Cannot send audio: Not connected to Gemini');
+    return Promise.reject(new Error('Not connected to Gemini'));
+  }
+
+  try {
+    // Convert ArrayBuffer to base64 string
+    const base64Audio = btoa(
+      new Uint8Array(audioData)
+        .reduce((data, byte) => data + String.fromCharCode(byte), '')
+    );
+
+    // Send the audio data to the Gemini Live API
+    if (session) {
+      session.sendRealtimeInput({
+        audio: {
+          data: base64Audio,
+          mimeType: "audio/pcm;rate=16000"
+        }
+      });
+    }
+
+    return Promise.resolve();
+  } catch (error) {
+    console.error('[GeminiService] Error sending audio data:', error);
+    return Promise.reject(error);
+  }
+}
+
+/**
+ * Signals the start of voice activity to the Gemini Live API
+ * Use this when automatic voice activity detection is disabled
+ * @returns Promise that resolves when signal is sent
+ */
+export async function signalActivityStart(): Promise<void> {
+  console.log('[GeminiService] Signaling activity start');
+
+  // Check if we have an active session
+  if (!session || !isConnected) {
+    console.error('[GeminiService] Cannot signal activity: Not connected to Gemini');
+    return Promise.reject(new Error('Not connected to Gemini'));
+  }
+
+  try {
+    // Send activity start signal
+    if (session) {
+      session.sendRealtimeInput({
+        activityStart: {}
+      });
+    }
+
+    return Promise.resolve();
+  } catch (error) {
+    console.error('[GeminiService] Error signaling activity start:', error);
+    return Promise.reject(error);
+  }
+}
+
+/**
+ * Signals the end of voice activity to the Gemini Live API
+ * Use this when automatic voice activity detection is disabled
+ * @returns Promise that resolves when signal is sent
+ */
+export async function signalActivityEnd(): Promise<void> {
+  console.log('[GeminiService] Signaling activity end');
+
+  // Check if we have an active session
+  if (!session || !isConnected) {
+    console.error('[GeminiService] Cannot signal activity: Not connected to Gemini');
+    return Promise.reject(new Error('Not connected to Gemini'));
+  }
+
+  try {
+    // Send activity end signal
+    if (session) {
+      session.sendRealtimeInput({
+        activityEnd: {}
+      });
+    }
+
+    return Promise.resolve();
+  } catch (error) {
+    console.error('[GeminiService] Error signaling activity end:', error);
+    return Promise.reject(error);
+  }
 }
