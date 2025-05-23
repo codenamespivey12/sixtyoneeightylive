@@ -39,6 +39,7 @@ let session: Session | undefined = undefined;
 let audioParts: string[] = [];
 let activeConfig: GeminiApiConfig | undefined = undefined;
 let isConnected = false;
+let currentVoiceName: VoicePreference = DEFAULT_VOICE;
 let genAI: GoogleGenAI | null = null;
 let apiKey: string = '';
 let messageCallbacks: Array<(response: GeminiResponse) => void> = [];
@@ -63,7 +64,7 @@ export const debugState = {
 export async function connectToGemini(key: string): Promise<void> {
   console.log('[GeminiService] Connecting to Gemini Live API');
   console.log('[GeminiService] Using model:', MODEL_NAME);
-  console.log('[GeminiService] Using voice:', DEFAULT_VOICE);
+  console.log('[GeminiService] Using voice:', currentVoiceName); // Use currentVoiceName
 
   // Store the API key
   apiKey = key;
@@ -74,13 +75,22 @@ export async function connectToGemini(key: string): Promise<void> {
 
     // Create a simplified configuration for the new SDK based on the example
     const config = {
-      responseModalities: [Modality.TEXT],
+      responseModalities: [Modality.AUDIO],
       systemInstruction: {
         parts: [{
           text: SYSTEM_PROMPT
         }]
+      },
+      speechConfig: { // Add speechConfig
+        voiceConfig: {
+          prebuiltVoiceConfig: {
+            voiceName: currentVoiceName
+          }
+        }
       }
     };
+    console.log('[GeminiService] responseModalities set to AUDIO');
+    console.log('[GeminiService] speechConfig set with voice:', currentVoiceName);
 
     // Save the active configuration for later use
     activeConfig = config as unknown as GeminiApiConfig;
@@ -188,6 +198,59 @@ export async function sendChatMessage(message: GeminiMessage): Promise<void> {
       session.sendClientContent({
         turns: message.text
       });
+    }
+
+    // Video Sending Logic
+    if (message.videoStream && message.videoStream.active && session && isConnected) {
+      console.log('[GeminiService] Attempting to send video frame...');
+      try {
+        await new Promise<void>((resolve, reject) => {
+          const video = document.createElement('video');
+          video.srcObject = message.videoStream;
+          video.onloadedmetadata = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const context = canvas.getContext('2d');
+            if (context) {
+              context.drawImage(video, 0, 0, canvas.width, canvas.height);
+              const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+              const base64VideoFrame = dataUrl.split(',')[1]; // Remove "data:image/jpeg;base64," prefix
+
+              if (session) {
+                session.sendRealtimeInput({
+                  video: {
+                    data: base64VideoFrame,
+                    mimeType: 'image/jpeg'
+                  }
+                });
+                console.log('[GeminiService] Video frame sent successfully.');
+              } else {
+                console.warn('[GeminiService] Session became undefined before sending video frame.');
+              }
+            } else {
+              console.error('[GeminiService] Failed to get canvas context for video frame.');
+            }
+            resolve();
+          };
+          video.onerror = (e) => {
+            console.error('[GeminiService] Error loading video for frame capture:', e);
+            reject(new Error('Error loading video for frame capture'));
+          };
+          video.play().catch(e => { // Ensure video is playing to capture a frame
+             console.warn('[GeminiService] Video play() promise rejected:', e);
+             // Attempt to resolve anyway if metadata is already loaded or will load
+             // This can happen if the stream is short or already processed
+             if (video.readyState >= 2) { // HAVE_CURRENT_DATA or more
+                video.onloadedmetadata(new Event('loadedmetadata')); // Manually trigger if needed
+             }
+          });
+        });
+      } catch (videoError) {
+        console.error('[GeminiService] Error processing video frame:', videoError);
+        // Potentially reject the main promise or handle error as appropriate
+        // For now, just logging, as text might have already been sent.
+      }
     }
 
     // Process the response using handleTurn
@@ -372,23 +435,40 @@ export async function initializeLocalMedia(): Promise<{ videoStream: MediaStream
  * @param voiceName - Name of the voice to use
  * @returns Promise that resolves when voice preference is set
  */
-export async function setVoicePreference(voiceName: VoicePreference = 'Leda'): Promise<void> {
-  console.log('[GeminiService] Setting voice preference to:', voiceName);
+export async function setVoicePreference(voiceName: VoicePreference = DEFAULT_VOICE): Promise<void> {
+  console.log(`[GeminiService] Attempting to set voice preference to: ${voiceName}`);
 
-  if (!session || !isConnected) {
-    console.error('[GeminiService] Cannot set voice preference: Not connected to Gemini');
-    return Promise.reject(new Error('Not connected to Gemini'));
-  }
+  const oldVoiceName = currentVoiceName;
+  currentVoiceName = voiceName;
 
-  try {
-    // For a real implementation, we would need to reconnect with a new config
-    // This is a placeholder until we implement that functionality
-    console.log('[GeminiService] Voice preference set successfully');
-    return Promise.resolve();
-  } catch (error) {
-    console.error('[GeminiService] Error setting voice preference:', error);
-    return Promise.reject(error);
+  if (isConnected && session && oldVoiceName !== voiceName) {
+    console.log(`[GeminiService] Voice changed from ${oldVoiceName} to ${voiceName}. Reconnecting...`);
+    try {
+      await disconnectFromGemini();
+      // Ensure apiKey is available and connectToGemini is called
+      if (apiKey) {
+        await connectToGemini(apiKey);
+        console.log(`[GeminiService] Reconnected successfully with new voice: ${voiceName}`);
+      } else {
+        console.error('[GeminiService] API key not available, cannot reconnect.');
+        // Potentially revert voice change or handle error appropriately
+        currentVoiceName = oldVoiceName; // Revert if reconnection isn't possible
+        throw new Error('API key not available for reconnection.');
+      }
+    } catch (error) {
+      console.error('[GeminiService] Error during reconnection after voice change:', error);
+      currentVoiceName = oldVoiceName; // Revert voice change on error
+      // Propagate the error to the caller
+      throw error;
+    }
+  } else if (isConnected && session && oldVoiceName === voiceName) {
+    console.log(`[GeminiService] Voice preference is already ${voiceName}. No change needed.`);
+  } else {
+    // Not connected, or voice is the same. Preference will be used on next connection.
+    console.log(`[GeminiService] Voice preference set to ${voiceName}. It will be used on the next connection.`);
   }
+  // If no reconnection was needed or it completed successfully
+  return Promise.resolve();
 }
 
 /**
