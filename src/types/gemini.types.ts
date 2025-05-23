@@ -76,6 +76,7 @@ export type GeminiResponse = {
   text?: string;
   audioData?: string;
   mimeType?: string;
+  audioMimeType?: string;
   isComplete?: boolean;
 };
 

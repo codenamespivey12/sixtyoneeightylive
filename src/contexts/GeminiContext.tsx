@@ -22,6 +22,7 @@ interface GeminiContextState {
     timestamp: Date;
   }>;
   audioData: string | null; // For received audio from Gemini
+  audioMimeType: string | null;
   errorMessage: string | null;
   isConnecting: boolean;
   isConnected: boolean;
@@ -54,6 +55,7 @@ const GeminiContext = createContext<GeminiContextState>({
   connectionStatus: 'disconnected',
   messages: [],
   audioData: null,
+  audioMimeType: null,
   errorMessage: null,
   isConnecting: false,
   isConnected: false,
@@ -91,6 +93,7 @@ export const GeminiProvider: React.FC<GeminiProviderProps> = ({ children }) => {
   const [connectionStatus, setConnectionStatus] = useState<GeminiConnectionStatus>('disconnected');
   const [messages, setMessages] = useState<GeminiContextState['messages']>([]);
   const [audioData, setAudioData] = useState<string | null>(null); // For received audio
+  const [audioMimeType, setAudioMimeType] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
@@ -140,6 +143,17 @@ export const GeminiProvider: React.FC<GeminiProviderProps> = ({ children }) => {
       if (response.audioData) {
         console.log('[GeminiContext] Received audio data, setting in context');
         setAudioData(response.audioData);
+        // Also set the mime type
+        if (response.audioMimeType) {
+          console.log('[GeminiContext] Received audio MIME type:', response.audioMimeType);
+          setAudioMimeType(response.audioMimeType);
+        } else {
+          console.warn('[GeminiContext] Audio data received but no MIME type.');
+          setAudioMimeType(null); // Reset if not provided
+        }
+      } else {
+        // If there's no new audio data, clear the old mime type as well
+        setAudioMimeType(null);
       }
     });
 
@@ -294,6 +308,7 @@ export const GeminiProvider: React.FC<GeminiProviderProps> = ({ children }) => {
     connectionStatus,
     messages,
     audioData, // Received audio from Gemini
+    audioMimeType, // Add this
     errorMessage,
     isConnecting,
     isConnected,

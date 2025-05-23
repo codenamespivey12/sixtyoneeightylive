@@ -6,7 +6,7 @@ import { useGemini } from '../../contexts/GeminiContext';
  * This component doesn't render any visible UI elements, it just plays audio
  */
 const AudioPlayer: React.FC = () => {
-  const { audioData } = useGemini();
+  const { audioData, audioMimeType } = useGemini();
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
@@ -19,7 +19,11 @@ const AudioPlayer: React.FC = () => {
     if (audioData) {
       try {
         // Create a data URL from the base64 audio data
-        const audioSrc = `data:audio/mp3;base64,${audioData}`;
+        const currentMimeType = audioMimeType ? audioMimeType : 'audio/mp3';
+        if (!audioMimeType) {
+          console.warn('[AudioPlayer] audioMimeType is not available, defaulting to audio/mp3. Playback might fail if data is not MP3.');
+        }
+        const audioSrc = `data:${currentMimeType};base64,${audioData}`;
         
         // Set the source and play
         audioRef.current.src = audioSrc;
@@ -52,7 +56,7 @@ const AudioPlayer: React.FC = () => {
         audioRef.current.src = '';
       }
     };
-  }, [audioData]);
+  }, [audioData, audioMimeType]);
 
   // This component doesn't render anything visible
   return null;

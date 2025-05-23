@@ -335,6 +335,7 @@ export function handleModelTurn(message: LiveServerMessage): void {
     // Extract text content if available
     let textContent = '';
     let audioData: string | undefined = undefined;
+    let audioMimeType: string | undefined = undefined;
 
     if (message.serverContent?.modelTurn?.parts) {
       const part = message.serverContent.modelTurn.parts[0];
@@ -347,6 +348,10 @@ export function handleModelTurn(message: LiveServerMessage): void {
       if (part?.inlineData) {
         console.log(`[GeminiService] Audio data received`);
         audioData = part.inlineData.data;
+        audioMimeType = part.inlineData.mimeType; // Extract mimeType
+        if (audioMimeType) {
+          console.log('[GeminiService] Audio MIME type received:', audioMimeType);
+        }
 
         // Store audio parts for potential WAV conversion
         if (audioData) {
@@ -365,6 +370,7 @@ export function handleModelTurn(message: LiveServerMessage): void {
       const response: GeminiResponse = {
         text: textContent || undefined,
         audioData: audioData,
+        audioMimeType: audioMimeType, // Add audioMimeType
         isComplete: message.serverContent?.turnComplete || false
       };
 
