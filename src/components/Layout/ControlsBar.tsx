@@ -118,19 +118,19 @@ const ControlsBar: React.FC = () => {
   return (
     <>
       <ControlButton
-        label="MIC"
+        label="MicCheck"
         active={micActive}
         onClick={toggleMic}
       />
 
       <ControlButton
-        label="CAM"
+        label="Webcam"
         active={cameraActive}
         onClick={toggleCamera}
       />
 
       <ControlButton
-        label="SCREEN"
+        label="Screen Share"
         active={screenActive}
         onClick={toggleScreen}
       />
