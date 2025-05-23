@@ -206,7 +206,9 @@ export async function sendChatMessage(message: GeminiMessage): Promise<void> {
       try {
         await new Promise<void>((resolve, reject) => {
           const video = document.createElement('video');
-          video.srcObject = message.videoStream;
+          // Ensure we're working with a non-null MediaProvider
+          const mediaStream = message.videoStream as MediaStream;
+          video.srcObject = mediaStream;
           video.onloadedmetadata = () => {
             const canvas = document.createElement('canvas');
             canvas.width = video.videoWidth;
@@ -242,7 +244,8 @@ export async function sendChatMessage(message: GeminiMessage): Promise<void> {
              // Attempt to resolve anyway if metadata is already loaded or will load
              // This can happen if the stream is short or already processed
              if (video.readyState >= 2) { // HAVE_CURRENT_DATA or more
-                video.onloadedmetadata(new Event('loadedmetadata')); // Manually trigger if needed
+                const event = new Event('loadedmetadata');
+                video.onloadedmetadata && video.onloadedmetadata(event); // Check if onloadedmetadata exists before calling
              }
           });
         });

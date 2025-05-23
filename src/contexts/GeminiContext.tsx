@@ -2,10 +2,10 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import * as geminiLiveService from '../services/geminiLiveService';
 import { useMicrophone, useWebcam, useScreenShare } from '../hooks';
-import type { 
-  GeminiMessage, 
+import type {
+  GeminiMessage,
   GeminiConnectionStatus,
-  VoicePreference 
+  VoicePreference
 } from '../types/gemini.types';
 
 // Available voices (as per documentation)
@@ -25,12 +25,14 @@ interface GeminiContextState {
   errorMessage: string | null;
   isConnecting: boolean;
   isConnected: boolean;
-  
+
   selectedVoice: VoicePreference;
   microphoneStream: MediaStream | null;
   isMicrophoneOn: boolean;
   microphoneError: Error | null;
   microphoneVolume: number; // from useMicrophone
+  microphoneGain: number; // Added for microphone gain control
+  setMicrophoneGain: (gain: number) => void; // Added for microphone gain control
   webcamStream: MediaStream | null;
   isWebcamOn: boolean;
   webcamError: Error | null;
@@ -55,12 +57,14 @@ const GeminiContext = createContext<GeminiContextState>({
   errorMessage: null,
   isConnecting: false,
   isConnected: false,
-  
+
   selectedVoice: DEFAULT_VOICE,
   microphoneStream: null,
   isMicrophoneOn: false,
   microphoneError: null,
   microphoneVolume: 0,
+  microphoneGain: 1.0, // Default gain value
+  setMicrophoneGain: () => {}, // Empty function as default
   webcamStream: null,
   isWebcamOn: false,
   webcamError: null,
@@ -95,34 +99,36 @@ export const GeminiProvider: React.FC<GeminiProviderProps> = ({ children }) => {
   const [selectedVoice, setSelectedVoice] = useState<VoicePreference>(DEFAULT_VOICE);
 
   // Media Hooks
-  const { 
-    stream: micStream, 
-    status: micStatus, 
-    error: micError, 
+  const {
+    stream: micStream,
+    status: micStatus,
+    error: micError,
     volume: micVolume,
-    startMicrophone, 
-    stopMicrophone 
+    gain: micGain,
+    setGain: setMicGain,
+    startMicrophone,
+    stopMicrophone
   } = useMicrophone();
-  const { 
-    stream: camStream, 
-    status: camStatus, 
-    error: camError, 
-    startWebcam, 
-    stopWebcam 
+  const {
+    stream: camStream,
+    status: camStatus,
+    error: camError,
+    startWebcam,
+    stopWebcam
   } = useWebcam();
-  const { 
-    stream: shareStream, 
-    status: shareStatus, 
-    error: shareError, 
-    startScreenShare, 
-    stopScreenShare 
+  const {
+    stream: shareStream,
+    status: shareStatus,
+    error: shareError,
+    startScreenShare,
+    stopScreenShare
   } = useScreenShare();
 
   // Derived media states
   const isMicrophoneOn = micStatus === 'active';
   const isWebcamOn = camStatus === 'active';
   const isScreenShareOn = shareStatus === 'active';
-  
+
   // Handle incoming messages from Gemini (for text and received audio)
   useEffect(() => {
     // Set up message listener for text and incoming audio data from Gemini
@@ -130,18 +136,18 @@ export const GeminiProvider: React.FC<GeminiProviderProps> = ({ children }) => {
       if (response.text) {
         addMessage(response.text, false);
       }
-      
+
       if (response.audioData) {
         setAudioData(response.audioData);
       }
     });
-    
+
     // Clean up on unmount
     return () => {
       unsubscribe();
     };
   }, []);
-  
+
   // Helper to add a message to the chat
   const addMessage = (content: string, isUser: boolean) => {
     setMessages((prev) => [
@@ -154,16 +160,16 @@ export const GeminiProvider: React.FC<GeminiProviderProps> = ({ children }) => {
       },
     ]);
   };
-  
+
   // Connect to sixtyoneeighty
   const connectToGemini = async (apiKey: string) => {
     try {
       setConnectionStatus('connecting');
       setIsConnecting(true);
       setErrorMessage(null);
-      
+
       await geminiLiveService.connectToGemini(apiKey);
-      
+
       setConnectionStatus('connected');
       setIsConnected(true);
     } catch (error) {
@@ -174,7 +180,7 @@ export const GeminiProvider: React.FC<GeminiProviderProps> = ({ children }) => {
       setIsConnecting(false);
     }
   };
-  
+
   // Disconnect from sixtyoneeighty
   const disconnectFromGemini = async () => {
     try {
@@ -186,26 +192,26 @@ export const GeminiProvider: React.FC<GeminiProviderProps> = ({ children }) => {
       console.error('[GeminiContext] Disconnection error:', error);
     }
   };
-  
+
   // Send a message to Gemini (text and optional videoStream)
   const sendMessage = async (text: string, videoStream?: MediaStream) => {
     if (!text.trim() && !videoStream) {
       console.log('[GeminiContext] sendMessage: Empty message and no video stream.');
       return;
     }
-    
+
     try {
       // Add user message to chat
       if (text.trim()) { // Only add user message if there's text
         addMessage(text, true);
       }
-      
+
       // Send message to Gemini
       const message: GeminiMessage = {
         text: text.trim(), // Ensure text is trimmed
         videoStream // This will be webcam or screen share stream
       };
-      
+
       console.log('[GeminiContext] Sending message to service:', message);
       await geminiLiveService.sendChatMessage(message);
 
@@ -281,7 +287,7 @@ export const GeminiProvider: React.FC<GeminiProviderProps> = ({ children }) => {
       // Error state is handled by shareError from the hook
     }
   };
-  
+
   // Provide the context value
   const contextValue: GeminiContextState = {
     connectionStatus,
@@ -290,12 +296,14 @@ export const GeminiProvider: React.FC<GeminiProviderProps> = ({ children }) => {
     errorMessage,
     isConnecting,
     isConnected,
-    
+
     selectedVoice,
     microphoneStream: micStream,
     isMicrophoneOn,
     microphoneError: micError,
     microphoneVolume: micVolume,
+    microphoneGain: micGain, // Add microphone gain
+    setMicrophoneGain: setMicGain, // Add microphone gain setter
     webcamStream: camStream,
     isWebcamOn,
     webcamError: camError,
@@ -311,7 +319,7 @@ export const GeminiProvider: React.FC<GeminiProviderProps> = ({ children }) => {
     toggleWebcam,
     toggleScreenShare,
   };
-  
+
   return (
     <GeminiContext.Provider value={contextValue}>
       {children}
