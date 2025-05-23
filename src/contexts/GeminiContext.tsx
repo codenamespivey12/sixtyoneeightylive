@@ -138,6 +138,7 @@ export const GeminiProvider: React.FC<GeminiProviderProps> = ({ children }) => {
       }
 
       if (response.audioData) {
+        console.log('[GeminiContext] Received audio data, setting in context');
         setAudioData(response.audioData);
       }
     });

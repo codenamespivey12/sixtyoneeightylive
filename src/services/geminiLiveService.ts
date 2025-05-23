@@ -341,7 +341,7 @@ export function handleModelTurn(message: LiveServerMessage): void {
 
       if (part?.text) {
         textContent = part.text;
-        console.log(`[GeminiService] Text: ${textContent}`);
+        console.log(`[GeminiService] Text content extracted: "${textContent}"`);
       }
 
       if (part?.inlineData) {
@@ -359,21 +359,32 @@ export function handleModelTurn(message: LiveServerMessage): void {
       }
     }
 
-    // Prepare response for subscribers
-    const response: GeminiResponse = {
-      text: textContent || undefined,
-      audioData: audioData,
-      isComplete: message.serverContent?.turnComplete || false
-    };
+    // Only send non-empty responses to subscribers
+    if (textContent || audioData) {
+      // Prepare response for subscribers
+      const response: GeminiResponse = {
+        text: textContent || undefined,
+        audioData: audioData,
+        isComplete: message.serverContent?.turnComplete || false
+      };
 
-    // Notify all subscribers
-    messageCallbacks.forEach(callback => {
-      try {
-        callback(response);
-      } catch (error) {
-        console.error('[GeminiService] Error in message callback:', error);
+      // Notify all subscribers
+      messageCallbacks.forEach(callback => {
+        try {
+          callback(response);
+        } catch (error) {
+          console.error('[GeminiService] Error in message callback:', error);
+        }
+      });
+
+      // Log the content being sent to subscribers
+      if (textContent) {
+        console.log('[GeminiService] Sending text to subscribers:', textContent);
       }
-    });
+      if (audioData) {
+        console.log('[GeminiService] Sending audio data to subscribers');
+      }
+    }
 
     console.log('[GeminiService] Model turn processed successfully');
   } catch (error) {
