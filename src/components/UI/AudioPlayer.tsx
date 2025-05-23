@@ -1,64 +1,111 @@
 import React, { useEffect, useRef } from 'react';
 import { useGemini } from '../../contexts/GeminiContext';
 
+// AudioContext Management
+let audioContext: AudioContext | null = null;
+const getAudioContext = (): AudioContext => {
+  if (!audioContext || audioContext.state === 'closed') {
+    audioContext = new AudioContext({ sampleRate: 24000 }); // Set sample rate based on known PCM rate
+    console.log('[AudioPlayer] New AudioContext created with sample rate 24000 Hz');
+  }
+  return audioContext;
+};
+
+// Base64 to ArrayBuffer Conversion
+const base64ToArrayBuffer = (base64: string): ArrayBuffer => {
+  const binaryString = window.atob(base64);
+  const len = binaryString.length;
+  const bytes = new Uint8Array(len);
+  for (let i = 0; i < len; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  return bytes.buffer;
+};
+
 /**
  * AudioPlayer component that plays audio data received from Gemini
- * This component doesn't render any visible UI elements, it just plays audio
  */
 const AudioPlayer: React.FC = () => {
   const { audioData, audioMimeType } = useGemini();
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null); // For non-PCM audio
 
-  useEffect(() => {
-    // Create audio element if it doesn't exist
-    if (!audioRef.current) {
-      audioRef.current = new Audio();
+  const playPcmData = (ctx: AudioContext, data: string) => {
+    let arrayBuffer;
+    try {
+      arrayBuffer = base64ToArrayBuffer(data);
+    } catch (e) {
+      console.error('[AudioPlayer] Error converting base64 to ArrayBuffer:', e);
+      return;
     }
 
-    // Play audio when audioData changes
+    ctx.decodeAudioData(arrayBuffer)
+      .then(decodedBuffer => {
+        console.log('[AudioPlayer] Audio data decoded successfully.');
+        const source = ctx.createBufferSource();
+        source.buffer = decodedBuffer;
+        source.connect(ctx.destination);
+        source.start(0);
+        console.log('[AudioPlayer] PCM playback started via Web Audio API.');
+      })
+      .catch(error => {
+        console.error('[AudioPlayer] Error decoding PCM audio data:', error);
+      });
+  };
+
+  useEffect(() => {
     if (audioData) {
-      try {
-        // Create a data URL from the base64 audio data
-        const currentMimeType = audioMimeType ? audioMimeType : 'audio/mp3';
-        if (!audioMimeType) {
-          console.warn('[AudioPlayer] audioMimeType is not available, defaulting to audio/mp3. Playback might fail if data is not MP3.');
+      const currentMimeType = audioMimeType || 'audio/mp3'; // Default if not provided
+
+      // Standardize PCM mime type check
+      const isPcm = currentMimeType.startsWith('audio/pcm') || 
+                    currentMimeType.startsWith('audio/L16') || 
+                    currentMimeType.startsWith('audio/l16');
+
+
+      if (isPcm) {
+        console.log('[AudioPlayer] Attempting to play PCM audio using Web Audio API.');
+        const localAudioContext = getAudioContext();
+
+        if (localAudioContext.state === 'suspended') {
+          localAudioContext.resume().then(() => {
+            console.log('[AudioPlayer] AudioContext resumed.');
+            playPcmData(localAudioContext, audioData);
+          }).catch(e => console.error('[AudioPlayer] Error resuming AudioContext:', e));
+        } else {
+          playPcmData(localAudioContext, audioData);
         }
-        const audioSrc = `data:${currentMimeType};base64,${audioData}`;
-        
-        // Set the source and play
-        audioRef.current.src = audioSrc;
-        
-        // Log for debugging
-        console.log('[AudioPlayer] Playing audio data');
-        
-        // Play the audio
-        const playPromise = audioRef.current.play();
-        
-        // Handle play promise (required for modern browsers)
-        if (playPromise !== undefined) {
-          playPromise
-            .then(() => {
-              console.log('[AudioPlayer] Audio playback started successfully');
-            })
-            .catch(error => {
-              console.error('[AudioPlayer] Audio playback failed:', error);
-            });
+      } else {
+        console.log(`[AudioPlayer] Attempting to play audio with MIME type: ${currentMimeType} using HTMLAudioElement.`);
+        if (!audioRef.current) {
+          audioRef.current = new Audio();
         }
-      } catch (error) {
-        console.error('[AudioPlayer] Error playing audio:', error);
+        try {
+          const audioSrc = `data:${currentMimeType};base64,${audioData}`;
+          audioRef.current.src = audioSrc;
+          const playPromise = audioRef.current.play();
+          if (playPromise !== undefined) {
+            playPromise
+              .then(() => console.log('[AudioPlayer] HTMLAudioElement playback started for', currentMimeType))
+              .catch(error => console.error('[AudioPlayer] HTMLAudioElement playback failed:', error));
+          }
+        } catch (error) {
+          console.error('[AudioPlayer] Error setting up HTMLAudioElement:', error);
+        }
       }
     }
 
-    // Cleanup function
+    // Cleanup
     return () => {
       if (audioRef.current) {
         audioRef.current.pause();
         audioRef.current.src = '';
       }
+      // Web Audio API sources stop themselves.
+      // If we needed to stop them, we'd need a ref to the sourceNode.
+      // For now, this is sufficient as Gemini responses are typically short.
     };
-  }, [audioData, audioMimeType]);
+  }, [audioData, audioMimeType]); // playPcmData is stable as it's defined outside but relies on audioData from closure.
 
-  // This component doesn't render anything visible
   return null;
 };
 
