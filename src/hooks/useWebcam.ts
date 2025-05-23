@@ -35,14 +35,18 @@ export function useWebcam(): UseWebcamResult {
     setStatus('requesting');
 
     try {
-      // Request webcam access
-      const videoStream = await navigator.mediaDevices.getUserMedia({
+      // Define video constraints
+      const videoConstraints: MediaStreamConstraints = {
         video: {
           width: { ideal: 1280 },
           height: { ideal: 720 },
           facingMode: 'user'
         }
-      });
+      };
+      console.log('[useWebcam] Using video constraints:', videoConstraints.video);
+
+      // Request webcam access
+      const videoStream = await navigator.mediaDevices.getUserMedia(videoConstraints);
 
       setStream(videoStream);
       setStatus('active');

@@ -42,14 +42,19 @@ export function useMicrophone(): UseMicrophoneResult {
     setStatus('requesting');
 
     try {
-      // Request microphone access
-      const audioStream = await navigator.mediaDevices.getUserMedia({
+      // Define audio constraints
+      const audioConstraints: MediaStreamConstraints = {
         audio: {
+          sampleRate: 16000,
           echoCancellation: true,
           noiseSuppression: true,
           autoGainControl: true
         }
-      });
+      };
+      console.log('[useMicrophone] Using audio constraints:', audioConstraints.audio);
+
+      // Request microphone access
+      const audioStream = await navigator.mediaDevices.getUserMedia(audioConstraints);
 
       // Create audio context for volume analysis
       const context = new AudioContext();

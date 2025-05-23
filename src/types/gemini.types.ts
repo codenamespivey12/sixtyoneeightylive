@@ -82,7 +82,8 @@ export type GeminiResponse = {
 // Message type for sending to Gemini
 export type GeminiMessage = {
   text: string;
-  mediaStream?: MediaStream;
+  mediaStream?: MediaStream; // Likely for audio
+  videoStream?: MediaStream; // For sending video frames
 };
 
 // Function type for unsubscribing from message listeners

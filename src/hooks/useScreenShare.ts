@@ -36,17 +36,19 @@ export function useScreenShare(): UseScreenShareResult {
 
     try {
       // Request screen sharing access
-      // TypeScript doesn't fully recognize all the options for getDisplayMedia
-      // Using a more generic type for the constraints
-      const screenStream = await navigator.mediaDevices.getDisplayMedia({
-        video: true,
-        // The following would be the ideal settings, but TypeScript doesn't recognize these properties
-        // We'll keep them commented for reference
+      // Define display media constraints
+      const displayMediaConstraints: MediaStreamConstraints = {
+        video: true
+        // Ideal but less supported properties:
         // video: {
-        //   cursor: 'always',
-        //   displaySurface: 'monitor'
+        //   cursor: 'always', // Or 'motion' or 'never'
+        //   displaySurface: 'monitor' // Or 'window', 'application'
         // }
-      } as MediaStreamConstraints);
+      };
+      console.log('[useScreenShare] Using displayMedia constraints:', displayMediaConstraints.video);
+
+      // Request screen sharing access
+      const screenStream = await navigator.mediaDevices.getDisplayMedia(displayMediaConstraints);
 
       // Set up track ended listener
       screenStream.getVideoTracks()[0].addEventListener('ended', () => {

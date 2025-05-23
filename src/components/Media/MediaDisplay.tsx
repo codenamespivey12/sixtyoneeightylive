@@ -1,70 +1,80 @@
-import React, { useState, useEffect, useRef } from 'react';
-import useWebcam from '../../hooks/useWebcam';
-import useScreenShare from '../../hooks/useScreenShare';
-import ComicSFXOverlay from '../UI/ComicSFXOverlay';
+import React, { useEffect, useRef } from 'react';
+import { useGemini } from '../../contexts/GeminiContext';
+// import ComicSFXOverlay from '../UI/ComicSFXOverlay'; // SFX can be re-added later if needed
 
 const MediaDisplay: React.FC = () => {
-  // Refs for media elements
-  const videoRef = useRef<HTMLVideoElement>(null);
-  
-  // Media hooks
-  const { stream: webcamStream, status: webcamStatus } = useWebcam();
-  const { stream: screenStream, status: screenStatus } = useScreenShare();
-  
-  // SFX state
-  const [showSfx, setShowSfx] = useState(false);
-  const [sfxType, setSfxType] = useState<'pow' | 'bam' | 'zap'>('zap');
-  
-  // Determine active media type
-  const activeStream = screenStatus === 'active' ? screenStream : webcamStatus === 'active' ? webcamStream : null;
-  const mediaType = screenStatus === 'active' ? 'screen' : webcamStatus === 'active' ? 'webcam' : 'none';
-  
-  // Handle media stream changes
+  const { 
+    webcamStream, 
+    isWebcamOn, 
+    screenShareStream, 
+    isScreenShareOn 
+  } = useGemini();
+
+  const webcamVideoRef = useRef<HTMLVideoElement>(null);
+  const screenShareVideoRef = useRef<HTMLVideoElement>(null);
+
   useEffect(() => {
-    if (videoRef.current && activeStream) {
-      videoRef.current.srcObject = activeStream;
-      
-      // Show a comic effect when media changes
-      setSfxType(mediaType === 'webcam' ? 'pow' : 'zap');
-      setShowSfx(true);
-      setTimeout(() => setShowSfx(false), 1500);
-      
-      console.log(`[MediaDisplay] ${mediaType.toUpperCase()} is now active`);  
-    } else if (videoRef.current && !activeStream) {
-      videoRef.current.srcObject = null;
-      console.log('[MediaDisplay] No media stream active');
+    if (webcamVideoRef.current && webcamStream) {
+      webcamVideoRef.current.srcObject = webcamStream;
+      console.log('[MediaDisplay] Webcam stream attached.');
+    } else if (webcamVideoRef.current) {
+      webcamVideoRef.current.srcObject = null;
     }
-  }, [activeStream, mediaType]);
+  }, [webcamStream, isWebcamOn]); // Re-run if stream or on-status changes
+
+  useEffect(() => {
+    if (screenShareVideoRef.current && screenShareStream) {
+      screenShareVideoRef.current.srcObject = screenShareStream;
+      console.log('[MediaDisplay] Screen share stream attached.');
+    } else if (screenShareVideoRef.current) {
+      screenShareVideoRef.current.srcObject = null;
+    }
+  }, [screenShareStream, isScreenShareOn]); // Re-run if stream or on-status changes
+
+  const noMediaActive = !isWebcamOn && !isScreenShareOn;
 
   return (
     <div className="media-display">
-      <div className="panel-title">MEDIA VIEWER</div>
+      <div className="panel-title">LOCAL MEDIA PREVIEW</div>
       
       <div className="media-container">
-        {mediaType === 'none' ? (
+        {noMediaActive && (
           <div className="no-media-placeholder">
             <div className="placeholder-icon">📺</div>
-            <p>No media source connected.</p>
-            <p>Use the utility belt controls to activate your webcam or share your screen.</p>
+            <p>Local media previews will appear here.</p>
+            <p>Enable Webcam or Screen Share from the Chat Panel.</p>
           </div>
-        ) : (
-          <>
+        )}
+
+        {isWebcamOn && webcamStream && (
+          <div className="media-feed webcam-feed">
             <video 
-              ref={videoRef}
+              ref={webcamVideoRef}
               autoPlay 
               muted 
               playsInline
-              className={`media-video ${mediaType}-video`}
+              className="media-video"
             />
-            <div className="media-type-indicator">
-              {mediaType === 'webcam' ? 'CAMERA ACTIVE' : 'SCREEN SHARING'}
-            </div>
-          </>
+            <div className="media-type-indicator">WEBCAM PREVIEW</div>
+          </div>
+        )}
+
+        {isScreenShareOn && screenShareStream && (
+          <div className="media-feed screenshare-feed">
+            <video 
+              ref={screenShareVideoRef}
+              autoPlay 
+              muted 
+              playsInline
+              className="media-video"
+            />
+            <div className="media-type-indicator">SCREEN SHARE PREVIEW</div>
+          </div>
         )}
       </div>
       
-      {/* Comic effect overlay */}
-      {showSfx && <ComicSFXOverlay visible={showSfx} type={sfxType} />}
+      {/* SFX can be re-added here if desired, e.g., based on isWebcamOn/isScreenShareOn changes */}
+      {/* {showSfx && <ComicSFXOverlay visible={showSfx} type={sfxType} />} */}
     </div>
   );
 };
