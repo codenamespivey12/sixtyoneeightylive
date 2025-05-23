@@ -155,7 +155,7 @@ export const GeminiProvider: React.FC<GeminiProviderProps> = ({ children }) => {
     ]);
   };
   
-  // Connect to Gemini
+  // Connect to sixtyoneeighty
   const connectToGemini = async (apiKey: string) => {
     try {
       setConnectionStatus('connecting');
@@ -175,7 +175,7 @@ export const GeminiProvider: React.FC<GeminiProviderProps> = ({ children }) => {
     }
   };
   
-  // Disconnect from Gemini
+  // Disconnect from sixtyoneeighty
   const disconnectFromGemini = async () => {
     try {
       await geminiLiveService.disconnectFromGemini();

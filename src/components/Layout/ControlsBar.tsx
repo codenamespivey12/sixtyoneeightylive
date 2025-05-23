@@ -15,7 +15,7 @@ const ControlButton: React.FC<ControlButtonProps> = ({ label, active = false, on
     className={`control-button ${active ? 'active' : ''}`}
     onClick={onClick}
   >
-    <span className="button-icon">{label.charAt(0)}</span>
+    {/* <span className="button-icon">{label.charAt(0)}</span> */}
     <span className="button-label">{label}</span>
   </button>
 );

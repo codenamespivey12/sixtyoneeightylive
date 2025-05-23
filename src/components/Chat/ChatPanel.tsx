@@ -5,11 +5,11 @@ import type { VoicePreference } from '../../types/gemini.types';
 import ComicSFXOverlay from '../UI/ComicSFXOverlay';
 
 const ChatPanel: React.FC = () => {
-  const { 
-    messages, 
-    sendMessage, 
-    isConnected, 
-    connectionStatus, 
+  const {
+    messages,
+    sendMessage,
+    isConnected,
+    connectionStatus,
     errorMessage: contextErrorMessage, // Renamed to avoid conflict
     selectedVoice,
     updateVoicePreference,
@@ -18,13 +18,15 @@ const ChatPanel: React.FC = () => {
     microphoneStream, // available if needed, but sendAudioData is separate
     microphoneError,
     microphoneVolume,
+    microphoneGain, // Added microphoneGain
+    setMicrophoneGain, // Added setMicrophoneGain
     isWebcamOn,
     toggleWebcam,
-    webcamStream, 
+    webcamStream,
     webcamError,
     isScreenShareOn,
     toggleScreenShare,
-    screenShareStream, 
+    screenShareStream,
     screenShareError,
   } = useGemini();
 
@@ -50,17 +52,17 @@ const ChatPanel: React.FC = () => {
       console.log('[ChatPanel] Not connected, cannot send message.');
       return;
     }
-    
+
     sendMessage(inputText, videoStreamToUse); // Context's sendMessage handles the GeminiMessage creation
-    
+
     if (inputText.trim()) {
       setInputText('');
     }
-    
+
     setSfxType(inputText.trim() ? 'pow' : 'zap'); // 'zap' if only video
     setShowSfx(true);
     setTimeout(() => setShowSfx(false), 1500);
-    
+
     console.log('[ChatPanel] Message/video sent. Text:', inputText);
   };
 
@@ -74,21 +76,20 @@ const ChatPanel: React.FC = () => {
   return (
     <div className="chat-panel">
       <div className="panel-title">MOJO'S CHAT ROOM</div>
-      
+
       {connectionStatus === 'error' && contextErrorMessage && (
         <div className="error-message component-error">
           Error: {contextErrorMessage}
         </div>
       )}
-      
+
       {/* Media Controls Section */}
       <div className="media-controls panel-section">
-        <div className="control-header">MEDIA CONTROLS</div>
-        <div className="control-group">
-          <label htmlFor="voice-select">Mojo's Voice: </label>
-          <select 
-            id="voice-select" 
-            value={selectedVoice} 
+        <div className="control-group voice-control">
+          <label htmlFor="voice-select">Mojo's Voice:</label>
+          <select
+            id="voice-select"
+            value={selectedVoice}
             onChange={(e) => updateVoicePreference(e.target.value as VoicePreference)}
             disabled={!isConnected}
             className="voice-select"
@@ -100,9 +101,9 @@ const ChatPanel: React.FC = () => {
         </div>
 
         <div className="control-group">
-          <button 
-            onClick={toggleMicrophone} 
-            disabled={!isConnected} 
+          <button
+            onClick={toggleMicrophone}
+            disabled={!isConnected}
             className={`media-toggle ${isMicrophoneOn ? 'active' : ''}`}
           >
             Mic ({isMicrophoneOn ? "ON" : "OFF"})
@@ -111,12 +112,28 @@ const ChatPanel: React.FC = () => {
             <span className="mic-volume">Vol: {(microphoneVolume * 100).toFixed(0)}%</span>
           )}
         </div>
+        {isMicrophoneOn && microphoneStream && ( // Only show gain slider if mic is on
+          <div className="control-group">
+            <label htmlFor="mic-gain-slider" className="mic-gain-label">Mic Gain: {microphoneGain !== undefined ? `${(microphoneGain * 100).toFixed(0)}%` : 'N/A'}</label>
+            <input
+              type="range"
+              id="mic-gain-slider"
+              min="0"
+              max="2"
+              step="0.01" // Finer control for 0-2 range
+              value={microphoneGain !== undefined ? microphoneGain : 1}
+              onChange={(e) => setMicrophoneGain(parseFloat(e.target.value))}
+              disabled={!isMicrophoneOn || !isConnected}
+              className="mic-gain-slider"
+            />
+          </div>
+        )}
         {microphoneError && <div className="error-message media-error">Mic: {microphoneError.message}</div>}
-        
+
         <div className="control-group">
-          <button 
-            onClick={toggleWebcam} 
-            disabled={!isConnected} 
+          <button
+            onClick={toggleWebcam}
+            disabled={!isConnected}
             className={`media-toggle ${isWebcamOn ? 'active' : ''}`}
           >
             Webcam ({isWebcamOn ? "ON" : "OFF"})
@@ -125,9 +142,9 @@ const ChatPanel: React.FC = () => {
         {webcamError && <div className="error-message media-error">Webcam: {webcamError.message}</div>}
 
         <div className="control-group">
-          <button 
-            onClick={toggleScreenShare} 
-            disabled={!isConnected} 
+          <button
+            onClick={toggleScreenShare}
+            disabled={!isConnected}
             className={`media-toggle ${isScreenShareOn ? 'active' : ''}`}
           >
             Screen ({isScreenShareOn ? "ON" : "OFF"})
@@ -135,18 +152,18 @@ const ChatPanel: React.FC = () => {
         </div>
         {screenShareError && <div className="error-message media-error">Screen: {screenShareError.message}</div>}
       </div>
-      
+
       <div className="chat-messages">
         {messages.length === 0 ? (
           <div className="empty-chat-message">
-            {isConnected ? 
-              "Connected! Send a message or video to Mojo. Don't forget to enable your microphone!" : 
-              'Connect to Gemini using the CONNECT button in the utility belt.'}
+            {isConnected ?
+              "Connected! Send a message or video to Mojo. Don't forget to enable your microphone!" :
+              'Connect to sixtyoneeighty using the CONNECT button in the utility belt.'}
           </div>
         ) : (
           messages.map((message) => (
-            <div 
-              key={message.id} 
+            <div
+              key={message.id}
               className={`chat-message ${message.isUser ? 'user-message' : 'ai-message'}`}
             >
               {message.content.split('\n').map((line, index) => (
@@ -156,26 +173,26 @@ const ChatPanel: React.FC = () => {
           ))
         )}
       </div>
-      
+
       <div className="chat-input-area">
         <textarea
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder={isConnected ? "Type your message, or just send video..." : "Connect to Gemini first..."}
+          placeholder={isConnected ? "Type your message, or just send video..." : "Connect to sixtyoneeighty first..."}
           className="chat-input"
           rows={2}
           disabled={!isConnected}
         />
-        <button 
-          className="send-button" 
+        <button
+          className="send-button"
           onClick={handleSendMessage}
           disabled={!isConnected || (!inputText.trim() && !isWebcamOn && !isScreenShareOn && (!microphoneStream || !isMicrophoneOn))} // Also check mic if no text/video
         >
           SEND
         </button>
       </div>
-      
+
       {showSfx && <ComicSFXOverlay visible={showSfx} type={sfxType} />}
     </div>
   );

@@ -7,8 +7,10 @@ interface UseMicrophoneResult {
   status: MicrophoneStatus;
   error: Error | null;
   volume: number;
+  gain: number; // Added gain
   startMicrophone: () => Promise<void>;
   stopMicrophone: () => void;
+  setGain: (newGain: number) => void; // Added setGain
 }
 
 /**
@@ -20,8 +22,10 @@ export function useMicrophone(): UseMicrophoneResult {
   const [status, setStatus] = useState<MicrophoneStatus>('inactive');
   const [error, setError] = useState<Error | null>(null);
   const [volume, setVolume] = useState<number>(0);
+  const [gainValue, setGainValue] = useState<number>(1.0); // Added gain state
   const [audioContext, setAudioContext] = useState<AudioContext | null>(null);
   const [analyzer, setAnalyzer] = useState<AnalyserNode | null>(null);
+  const [gainNode, setGainNode] = useState<GainNode | null>(null); // Added gainNode state
 
   // Clean up function to stop all tracks when component unmounts or status changes
   useEffect(() => {
@@ -61,11 +65,17 @@ export function useMicrophone(): UseMicrophoneResult {
       const source = context.createMediaStreamSource(audioStream);
       const analyzerNode = context.createAnalyser();
       analyzerNode.fftSize = 256;
-      source.connect(analyzerNode);
+
+      // Create and connect GainNode
+      const newGainNode = context.createGain();
+      newGainNode.gain.value = gainValue; // Set initial gain
+      source.connect(newGainNode);
+      newGainNode.connect(analyzerNode);
 
       setStream(audioStream);
       setAudioContext(context);
       setAnalyzer(analyzerNode);
+      setGainNode(newGainNode); // Store GainNode
       setStatus('active');
       
       // Start monitoring volume
@@ -90,10 +100,24 @@ export function useMicrophone(): UseMicrophoneResult {
       setAudioContext(null);
     }
     setAnalyzer(null);
+    setGainNode(null); // Clear GainNode
     setStatus('inactive');
     setVolume(0);
     console.log('[useMicrophone] Microphone stopped');
   }, [stream, audioContext]);
+
+  // Function to set gain
+  const setGain = useCallback((newGain: number) => {
+    const clampedGain = Math.max(0, Math.min(2, newGain)); // Clamp gain between 0.0 and 2.0
+    setGainValue(clampedGain);
+  }, []);
+
+  // Effect to apply gain changes to the GainNode
+  useEffect(() => {
+    if (gainNode) {
+      gainNode.gain.value = gainValue;
+    }
+  }, [gainValue, gainNode]);
 
   // Function to monitor microphone volume
   const monitorVolume = useCallback((analyzerNode: AnalyserNode) => {
@@ -130,8 +154,10 @@ export function useMicrophone(): UseMicrophoneResult {
     status,
     error,
     volume,
+    gain: gainValue, // Expose gain value
     startMicrophone,
-    stopMicrophone
+    stopMicrophone,
+    setGain // Expose setGain function
   };
 }
 

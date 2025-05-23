@@ -38,6 +38,63 @@
     }
   }
 
+  .media-controls {
+    padding: $spacing-sm;
+    margin-top: $spacing-md; /* Add more space at the top */
+
+    .control-group {
+      margin-bottom: $spacing-md; /* Increase bottom margin */
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+
+      &.voice-control {
+        flex-direction: column;
+        align-items: flex-start;
+        margin-bottom: $spacing-lg; /* Add even more space after the voice control */
+      }
+
+      label {
+        font-family: Arial, sans-serif;
+        font-weight: bold;
+        margin-right: $spacing-sm;
+        font-size: 0.9rem;
+      }
+
+      .voice-select {
+        width: 100%;
+        font-family: Arial, sans-serif;
+        padding: $spacing-xs;
+        border: $comic-border-thin;
+        border-radius: 4px;
+        background-color: white;
+        margin-top: $spacing-xs;
+      }
+
+      .media-toggle {
+        font-family: Arial, sans-serif;
+        font-weight: bold;
+        font-size: 0.9rem;
+        padding: $spacing-xs $spacing-sm;
+        border-radius: 4px;
+        background-color: $primary-yellow;
+        color: $outline-black;
+        text-transform: uppercase;
+
+        &.active {
+          background-color: $primary-blue;
+          color: white;
+        }
+      }
+
+      .mic-volume, .mic-gain-label {
+        font-family: Arial, sans-serif;
+        font-size: 0.8rem;
+        margin-left: $spacing-sm;
+      }
+    }
+  }
+
   .chat-input-area {
     margin-top: auto;
     padding: $spacing-sm;
@@ -60,6 +117,7 @@
   display: flex;
   flex-direction: column;
   height: 100%;
+  padding-top: $spacing-sm; /* Add padding at the top */
 
   .media-container {
     flex: 1;

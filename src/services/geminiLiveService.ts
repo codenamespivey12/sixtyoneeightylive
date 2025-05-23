@@ -99,7 +99,7 @@ export async function connectToGemini(key: string): Promise<void> {
     responseQueue = [];
     audioParts = [];
 
-    // Connect to the Live API
+    // Connect to sixtyoneeighty live
     if (genAI) {
       session = await genAI.live.connect({
         model: MODEL_NAME,
