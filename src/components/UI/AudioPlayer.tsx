@@ -1,4 +1,7 @@
 
+import React, { useEffect, useRef } from 'react';
+import { useGemini } from '../../contexts/GeminiContext';
+
 // AudioContext Management
 let audioContext: AudioContext | null = null;
 const getAudioContext = (): AudioContext => {
@@ -29,7 +32,7 @@ function createWavHeader(pcmDataLength: number, sampleRate: number, numChannels:
   // So, it's 4 (for "WAVE") + (8 + fmt_chunk_size) + (8 + data_chunk_size)
   // Standard fmt_chunk_size for PCM is 16.
   // So, RIFF chunk size = 4 + (8 + 16) + (8 + dataSize) = 36 + dataSize
-  const riffChunkSize = 36 + dataSize; 
+  const riffChunkSize = 36 + dataSize;
 
   const buffer = new ArrayBuffer(44); // Standard WAV header size
   const view = new DataView(buffer);
@@ -80,7 +83,8 @@ function createWavHeader(pcmDataLength: number, sampleRate: number, numChannels:
  * AudioPlayer component that plays audio data received from Gemini
  */
 const AudioPlayer: React.FC = () => {
-  const { audioData, audioMimeType } = useGemini();
+  const { audioData } = useGemini();
+  const audioMimeType = 'audio/mp3'; // Default MIME type
   const audioRef = useRef<HTMLAudioElement | null>(null); // For non-PCM audio
 
   const playPcmDataAsWav = (ctx: AudioContext, base64PcmData: string) => {
@@ -95,12 +99,12 @@ const AudioPlayer: React.FC = () => {
     const pcmDataLength = pcmArrayBuffer.byteLength;
     // Gemini audio is 24000 Hz, mono, 16-bit PCM
     const header = createWavHeader(pcmDataLength, 24000, 1, 16);
-    
+
     const wavBuffer = new ArrayBuffer(header.byteLength + pcmDataLength);
     const headerView = new Uint8Array(header);
     const pcmView = new Uint8Array(pcmArrayBuffer);
     const wavView = new Uint8Array(wavBuffer);
-    
+
     wavView.set(headerView, 0);
     wavView.set(pcmView, header.byteLength);
 
@@ -123,7 +127,7 @@ const AudioPlayer: React.FC = () => {
       const currentMimeType = audioMimeType || 'audio/mp3'; // Default if not provided
 
       // Standardize PCM mime type check
-      const isPcm = currentMimeType.toLowerCase().startsWith('audio/pcm') || 
+      const isPcm = currentMimeType.toLowerCase().startsWith('audio/pcm') ||
                     currentMimeType.toLowerCase().startsWith('audio/l16'); // L16 is often used for 16-bit PCM
 
       if (isPcm) {
@@ -150,9 +154,9 @@ const AudioPlayer: React.FC = () => {
           if (playPromise !== undefined) {
             playPromise
               .then(() => console.log('[AudioPlayer] HTMLAudioElement playback started for', currentMimeType))
-              .catch(error => console.error('[AudioPlayer] HTMLAudioElement playback failed:', error));
+              .catch((error: Error) => console.error('[AudioPlayer] HTMLAudioElement playback failed:', error));
           }
-        } catch (error) {
+        } catch (error: unknown) {
           console.error('[AudioPlayer] Error setting up HTMLAudioElement:', error);
         }
       }
